@@ -33,10 +33,10 @@ Stage 0 主要是对数据进行预处理，在获得文本长度时触发action
 ![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%201.png)  
 Stage 1 主要读取stopwords和常用词，并广播成字典，通过collect触发action，并把字典广播  
 ![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%202.png)  
-Stage 2 生成词频词典FreqDic  
-![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%203.png)  
+Stage 2 生成词频词典FreqDic 
 ![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%203_1.png)  
-Stage 3 
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%203.png)  
+Stage 3  
 (1) 生成candidate词典  
 (2) 计算凝结度  
 (3) 计算左右自由熵，并取其中的最小值作为最终的自由熵  
