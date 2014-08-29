@@ -140,7 +140,7 @@ object digwords_2_0 {
   def filterFunc( line : (String , Int) , wordLength : Int , wordFilter : Int) : Boolean= {
     val len = line._1.length
     val frequency = line._2
-    len >= 2 && len <= (wordLength - 1) && frequency > wordFilter
+    len >= 2 && len <= wordLength && frequency > wordFilter
   }
   //过滤掉stopword
   def filterStopWords ( words : String , dictionary : Array[ String]) : Boolean = {
