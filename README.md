@@ -33,8 +33,8 @@ Stage 0 主要是对数据进行预处理，在获得文本长度时触发action
 Stage 1 主要读取stopwords和常用词，并广播成字典，通过collect触发action，并把字典广播  
 ![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage2.png)  
 Stage 2 生成词频词典FreqDic  
-![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage3.2.png)  
 ![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage3.1.png)  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage3.2.png)  
 Stage 3  
 (1) 生成candidate词典  
 (2) 计算凝结度  
@@ -45,3 +45,20 @@ Stage 3
 1. 去掉两个词过滤阈值改为一个。在统计出所有词的词频后直接对candidate words进行过滤，减少了后续计算量。
 2. 首先计算自由熵，把自由熵为0的词再次过滤，减少了凝结度计算的词的个数。
 3. 只关注一个RDD而不是把每一个特征存在一个RDD里面，最后join到一起。减少了RDD的数量。
+
+
+版本2是目前最快的版本了，也比较稳定。在1的程度下进行了如上修改。  
+RDD操作图如下  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v2_stage0.png)  
+Note: 图中正方形代表一个RDD。整个过程分为 个stage。  
+Stage 0 主要是对数据进行预处理，在获得文本长度时触发action，完成第一个stage。preprocess()方法的功能  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v2_stage1.png)  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v2_stage2.png)  
+Stage 1 主要读取stopwords和常用词，并广播成字典，通过collect触发action，并把字典广播  
+Stage 2 把含有词频的词典广播成字典   
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v2_stage3.png)   
+Stage 3  
+(1) 生成candidate词典  
+(2) 进行词频过滤  
+(3) 计算自由熵，进行自由熵过滤    
+(4) 计算凝结度，进行凝结度过滤  
