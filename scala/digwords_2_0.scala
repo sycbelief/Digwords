@@ -5,8 +5,8 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 /**
  * Usage :
- * 0 输入文件  1 最终结果输出结果  2 词频门限值   3 凝结度下界  4 自由熵门限值  5 最长词长   6  分区个数  7 有效词频门限值
- * 8 stopword 字典  9 凝结度上界
+ * 0 输入文件  1 最终结果输出结果  2 词频门限值   3 凝结度下界  4 凝结度阈值上限 5 自由熵阈值下限  6 最长词长 7 分区个数
+ * 8 stopword 字典
  * Created by Administrator on 2014/8/18.
  */
 object digwords_2_0 {
@@ -14,31 +14,29 @@ object digwords_2_0 {
     val conf = new SparkConf().setAppName("digwords.version 2.0")
     val sc = new SparkContext(conf)
     // 获取参数
-    val frequencyThreshold : Int = args(2).toInt   // 最小词频阈值
+    val frequencyThreshold : Int = args(2).toInt   // 词频阈值
     val consolidateThresholdLow : Double = args(3).toDouble  // 凝结度下界
-    val freedomThreshold : Double = args(4).toDouble  // 最小自由熵阈值
-    val wordLength : Int= args(5).toInt   // 最长词长度
-    val numPartiton : Int = args(6).toInt // partition数，并行度
-    val wordFilter : Int = args(7).toInt   // 词频阈值
-    val consolidateThresholdHigh : Double = args(9).toDouble
+    val consolidateThresholdHigh : Double = args(4).toDouble  // 凝结度阈值上限
+    val freedomThreshold : Double = args(5).toDouble  // 最小自由熵阈值
+    val wordLength : Int= args(6).toInt   // 最长词长度
+    val numPartiton : Int = args(7).toInt // partition数，并行度
 
-    val sourceFile = sc.textFile(args(0), numPartiton).flatMap( line => preproccess( line ) )     // 按标点分句,同时洗数据
+    val sourceFile = sc.textFile(args(0), numPartiton).flatMap( line => preproccess( line ) )     // 按标点分句, 同时清洗数据
     val textLength = sourceFile.map(line => line.length).reduce( (a, b) => a + b)       // 计算总文本长度
-    // 开始分词 step1 : 词频    setp2: 自由熵 , 过滤自由熵为0的词   step3 : 计算凝结度
+    // 开始分词 step1 : 词频，过滤频率小于阈值的词    step2: 计算自由熵 , 过滤自由熵小于阈值的词   step3 : 计算凝结度，过滤凝结度小于阈值的词
     // 抽词，生成1-6的词典 (String ,Int)
     val wordsTimes = sourceFile.flatMap ((line : String ) => splitWord(line, wordLength )).map( ( word : String ) => (word ,1)).reduceByKey(_ + _ )
-    //val textLength = textLengthAccumulator.value
-    //  生成待查词列表 2-5 step1,且频率> wordFilter
-    val candidateWords2 = wordsTimes.filter( line => filterFunc( line , wordLength , wordFilter))
+    //  生成待查词列表 2-5 step1, 且频率> wordFilter
     val stopwords = sc.textFile(args(8))
     val stopwordsLocDic = stopwords.collect()
     val broadcastStopWords = sc.broadcast(stopwordsLocDic)
     //2-5的词，词频大于给定门限值，且经过stopwords的过滤
-    val candidateWords = candidateWords2.filter(line => filterStopWords(line._1, broadcastStopWords.value))
+    val candidateWords = wordsTimes.filter( line => filterFunc( line , wordLength , frequencyThreshold ,broadcastStopWords.value))
     broadcastStopWords.unpersist()
     stopwords.unpersist()
     candidateWords.persist()
-    // 计算自由熵 step2  左自由熵
+    // 计算自由熵 step2
+    // 左自由熵
     val wordsTimesReverse = wordsTimes.map{case (key ,value) => ( key.reverse , value)}
     val disDictionaryReverse = wordsTimesReverse.collect()
     Sorting.quickSort(disDictionaryReverse)(Ordering.by[(String, Int), String](_._1))
@@ -60,9 +58,9 @@ object digwords_2_0 {
     //(String, (Double, (Int, Double)))
     val freedomRDD_temp = rightFreedomRDD.join(leftFreedomRDD)
     val freedomRDD = freedomRDD_temp.map({line :(String, (Double, (Int, Double))) => (line._1, line._2._2._1 ,math.min(line._2._1, line._2._2._2))})
-    val freedomRDD2 = freedomRDD.filter{line :(String ,Int ,Double)=>(line._3!=0.0)}
-    // 计算凝结度 step2 ( String , Int ,Double)(词， 频率，自由熵) =》  (String , Int ,Double ,Double)
-    val consolidateRDD = freedomRDD2.map{line :( String ,Int ,Double) => countDoc (line, textLength, broadforwardDic.value)}.filter{line : (String, Int, Double, Double) => calculation( line._2 , line._3 ,line._4 ,frequencyThreshold ,freedomThreshold ,consolidateThresholdLow, consolidateThresholdHigh)}
+    val freedomRDD2 = freedomRDD.filter{line :(String ,Int ,Double)=>(line._3 >= freedomThreshold)}
+    // 计算凝结度 step3 ( String , Int ,Double)(词， 频率，自由熵) =》  (String , Int ,Double ,Double)
+    val consolidateRDD = freedomRDD2.map{line :( String ,Int ,Double) => countDoc (line, textLength, broadforwardDic.value)}.filter{line : (String, Int, Double, Double) => (line._4 >= consolidateThresholdLow && line._4 <= consolidateThresholdHigh)}
     consolidateRDD.saveAsTextFile(args(1))
   }
   //文本中出现明文的\r\n等转义符号
@@ -123,7 +121,7 @@ object digwords_2_0 {
   }
   //把小短句分成长度1-wordLength+1长度的词，时间复杂度为n^2
   def splitWord(v: String, wordLength: Int ):ArrayBuffer[String] = {
-    val len : Int= v.length
+    val len : Int = v.length
     val greetStrings =  mutable.ArrayBuffer[String]()
     for (i <- 0 to len - 1) {
       // 单词起始点位置
@@ -137,11 +135,29 @@ object digwords_2_0 {
     greetStrings
   }
   //过滤得到candidate word：长度2-5，频率大于wordfilter
-  def filterFunc( line : (String , Int) , wordLength : Int , wordFilter : Int) : Boolean= {
-    val len = line._1.length
-    val frequency = line._2
-    len >= 2 && len <= wordLength && frequency > wordFilter
+  def filterFunc( line : (String , Int) , wordLength : Int , wordFilter : Int ,dictionary : Array[ String]) : Boolean= {
+    val word = line._1
+    if ( dictionary.contains( word ))
+      false
+    else if(word.startsWith(".") || word.endsWith(".") || word.startsWith("-") || word.endsWith("-") || word.startsWith("*") || word.endsWith("*"))
+      false
+    else{
+      var flag = false
+      val len = word.length
+      val frequency = line._2
+      for(ch <- word){
+        if (ch < '0' || ch > '9'){
+          flag = true
+        }
+      }
+      if (flag == true){
+        if(len >= 2 && len <= wordLength && frequency >= wordFilter)
+          return true
+      }
+      return false
+    }
   }
+
   //过滤掉stopword
   def filterStopWords ( words : String , dictionary : Array[ String]) : Boolean = {
     if ( dictionary.contains( words ))
@@ -216,12 +232,9 @@ object digwords_2_0 {
     ( word ,wordLine._2 , dof.map((x:Int) => 1.0*x/total).map((i:Double) => -1 * math.log(i)*i).foldLeft(0.0)((x0, x)=> x0 + x))
   }
   //设定阈值过滤结果
-  def calculation ( f : Int ,  fr : Double ,c : Double , frequency : Int  , free : Double ,consolidate_low : Double , consolidate_high : Double) : Boolean = {
+  /*def calculation ( f : Int ,  fr : Double ,c : Double , frequency : Int  , free : Double ,consolidate_low : Double , consolidate_high : Double) : Boolean = {
     val consolidate : Boolean = c > consolidate_low && c < consolidate_high
     return ( (f >= frequency && consolidate) || ( f >= frequency && fr >= free ) || ( consolidate && fr >= free))
-  }
-  /*def calculation ( f : Int ,  fr : Double ,c : Double , frequency : Int  , free : Double ,consolidate_low : Double , consolidate_high : Double) : Boolean = {
-    val consolidate : Boolean = c >= consolidate_low && c <= consolidate_high
-    return ( f >= frequency && consolidate && fr >= free)
   }*/
+
 }
