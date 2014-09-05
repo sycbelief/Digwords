@@ -62,3 +62,18 @@ Stage 3
 (2) 进行词频过滤  
 (3) 计算自由熵，进行自由熵过滤    
 (4) 计算凝结度，进行凝结度过滤  
+
+
+版本3和版本2，版本1 的最大区别是参数的确定方式。
+版本1和版本2都需要人工标注或者人工给定参数，这样很容易造成阈值设定的不合理。我们希望计算机能自己通过数据集的特征设定来设定阈值。
+通常某个语料库里面会含有很多的常用词，这些常用词可以直接在给定的字典里面查到。基于语料库里面的这些重用词的凝结度和自由熵大小来确定新词的凝结度和自由熵的阈值。
+1.计算所有词的词频，自由熵，凝结度
+2.分离出常用词的词频，自由熵，凝结度，并从中找到最值
+3.分离出剩余词汇的三个特征，并以2中得到的最值作为阈值来过滤剩余的词。
+4.把剩下的词作为新词输出
+
+缺点：通过实验发现，通过常用词计算出来的三个特征值的阈值太松，不能起到很好的过滤效果，会使大量的结果被保留下来了。效果不及人工判定的阈值。所以我们放弃了这个方法，决定使用决策树算法来计算阈值。
+
+运行命令：./bin/spark-submit --master yarn-cluster --deploy-mode cluster --class digwords_3_0 --executor-memory 2g --driver-memory 2g --num-executors 4 /usr/Macy/jarFile/9_1_11testV3.jar 20 5 24 hdfs://hadoop1:9000//user/hadoop/Macy/input/adtest2 hdfs://hadoop1:9000//user/hadoop/Macy/input/stopwordsMoreThan2.txt hdfs://hadoop1:9000//user/hadoop/Macy/input/library hdfs://hadoop1:9000//user/hadoop/Macy/output/9_1/result_v3
+
+Note：只需要改一下输出路径，就可以再次运行
