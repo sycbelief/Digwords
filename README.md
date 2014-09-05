@@ -22,19 +22,19 @@ Digwords
 
 下面简单写一下version1的流程：  
 RDD操作图如下。  
-![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%200.png)  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage0.png)  
 Note: 图中正方形代表一个RDD。整个过程分为 个stage。  
 Stage 0 主要是对数据进行预处理，在获得文本长度时触发action，完成第一个stage。preprocess()方法的功能：  
 (1) 按标点符号断句，但会考虑.是小数点的情况  
 (2) 保留合法字符，祛除非法字符  
 (3) 英文字符大小写统一，阿拉伯数字和中文数字统一  
 最后的action获得一个Int类型的值  
-![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%201.png)  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage1.png)  
 Stage 1 主要读取stopwords和常用词，并广播成字典，通过collect触发action，并把字典广播  
-![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%202.png)  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage2.png)  
 Stage 2 生成词频词典FreqDic  
-![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%203_1.png)  
-![image](https://github.com/sycbelief/Digwords/blob/master/pic/Stage%203.png)  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage3.2.png)  
+![image](https://github.com/sycbelief/Digwords/blob/master/pic/v1_stage3.1.png)  
 Stage 3  
 (1) 生成candidate词典  
 (2) 计算凝结度  
