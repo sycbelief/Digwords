@@ -1,12 +1,9 @@
-package digwords
 /**
  * Created by Administrator on 2014/9/5.
  */
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.SparkContext._
-import scala.util.Sorting
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.util.Sorting
 /**
 
  * 改变： 分离stopword字典和正常字典

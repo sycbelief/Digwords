@@ -1,8 +1,6 @@
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.SparkContext._
-import scala.util.Sorting
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.util.Sorting
 /**
  * Created by Administrator on 2014/8/18.
  */

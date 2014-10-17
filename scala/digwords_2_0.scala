@@ -1,8 +1,6 @@
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.SparkContext._
-import scala.util.Sorting
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.util.Sorting
 /**
  * Usage :
  * 0 输入文件  1 最终结果输出结果  2 词频门限值   3 凝结度下界  4 凝结度阈值上限 5 自由熵阈值下限  6 最长词长 7 分区个数
